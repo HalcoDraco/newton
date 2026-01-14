@@ -6,6 +6,7 @@ Run with: uv run --extra torch-cu12 custom_newton_usage.py --viewer gl
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 
 import torch
@@ -189,11 +190,18 @@ class GeneticCartpoleTrainer:
 
     def _compute_reward(self, obs: torch.Tensor, alive_mask: torch.Tensor):
         cart_pos, pole1, pole2, cart_vel, pole1_vel, pole2_vel = obs.T
-        angle_cost = 2.0 * pole1.abs() + 1.5 * pole2.abs()
-        vel_cost = 0.05 * (cart_vel.abs() + pole1_vel.abs() + pole2_vel.abs())
+        # angle_cost = 2.0 * pole1.abs() + 1.5 * pole2.abs()
+        # vel_cost = 0.05 * (cart_vel.abs() + pole1_vel.abs() + pole2_vel.abs())
+        # pos_cost = 0.1 * cart_pos.abs()
+        # reward = 1.0 - (angle_cost + vel_cost + pos_cost)
+        # fail = (pole1.abs() > 0.8) | (pole2.abs() > 0.8) | (cart_pos.abs() > 2.4)
+
+        angle_cost = 2.0 * pole1.abs()
+        vel_cost = 0.05 * (cart_vel.abs() + pole1_vel.abs())
         pos_cost = 0.1 * cart_pos.abs()
         reward = 1.0 - (angle_cost + vel_cost + pos_cost)
-        fail = (pole1.abs() > 0.8) | (pole2.abs() > 0.8) | (cart_pos.abs() > 2.4)
+        fail = (pole1.abs() > 0.8) | (cart_pos.abs() > 2.4)
+
         alive_mask = alive_mask & (~fail)
         reward = reward * alive_mask
         return reward, alive_mask
@@ -213,6 +221,7 @@ class GeneticCartpoleTrainer:
             if hasattr(self.viewer, "is_running") and not self.viewer.is_running():
                 break
 
+            gen_start = time.perf_counter()
             self._reset_worlds()
             episode_returns = torch.zeros(self.params.num_worlds, device=self.device)
             alive_mask = torch.ones(self.params.num_worlds, device=self.device, dtype=torch.bool)
@@ -239,7 +248,13 @@ class GeneticCartpoleTrainer:
             elite_scores, elite_idx = torch.topk(episode_returns, k=elite_count)
             self.population_params = self._mutate(elite_idx)
 
-            print(f"[Gen {gen:03d}] mean_reward={mean_reward:.3f} best_gen={elite_scores.max().item():.3f} best_all={best_reward:.3f}")
+            elapsed = time.perf_counter() - gen_start
+            frames = self.params.episode_steps * self.params.num_worlds
+            fps = frames / elapsed if elapsed > 0 else float("inf")
+            print(
+                f"[Gen {gen:03d}] mean_reward={mean_reward:.3f} best_gen={elite_scores.max().item():.3f} "
+                f"best_all={best_reward:.3f} time={elapsed:.2f}s fps={fps:.1f}"
+            )
 
         if best_params is not None:
             self.population_params = {k: v.unsqueeze(0).expand(self.params.num_worlds, *v.shape) for k, v in best_params.items()}

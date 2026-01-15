@@ -89,14 +89,15 @@ class GeneticCartpoleTrainer:
         world.default_body_armature = 0.1
 
         world.add_usd(
-            newton.examples.get_asset("cartpole.usda"),
+            newton.examples.get_asset("cartpole_single_pendulum.usda"),
             collapse_fixed_joints=False,
             enable_self_collisions=False,
         )
-        world.joint_q[-3:] = [0.0, 0.3, 0.0]
+        world.joint_q[-2:] = [0.0, 0.3]
 
         scene = newton.ModelBuilder()
-        scene.replicate(world, num_worlds=self.params.num_worlds, spacing=(1.0, 2.0, 0.0))
+        spacing = (0.8, 4.0, 0.0)
+        scene.replicate(world, num_worlds=self.params.num_worlds, spacing=spacing)
 
         self.model = scene.finalize()
         self.solver = newton.solvers.SolverMuJoCo(self.model, disable_contacts=True)
@@ -105,12 +106,12 @@ class GeneticCartpoleTrainer:
         self.state_1 = self.model.state()
         self.control = self.model.control()
 
-        self.cartpoles = ArticulationView(self.model, "/cartPole", verbose=False)
+        self.cartpoles = ArticulationView(self.model, "/cartpole", verbose=False)
 
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
         self.viewer.set_model(self.model)
-        # if hasattr(self.viewer, "set_world_offsets"):
-        #     self.viewer.set_world_offsets((2.0, 2.0, 0.0))
+        if hasattr(self.viewer, "set_world_offsets"):
+            self.viewer.set_world_offsets(spacing)
 
         self.obs_dim = 2 * self.cartpoles.joint_coord_count
         self.joint_f_template = torch.zeros(
@@ -148,8 +149,8 @@ class GeneticCartpoleTrainer:
     def _reset_worlds(self):
         cart_positions = 0.5 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
         pole1_angles = 0.25 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
-        pole2_angles = 0.25 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
-        joint_q = torch.stack([cart_positions, pole1_angles, pole2_angles], dim=1)
+        # pole2_angles = 0.25 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
+        joint_q = torch.stack([cart_positions, pole1_angles], dim=1)
         joint_qd = torch.zeros_like(joint_q)
         self.cartpoles.set_attribute("joint_q", self.state_0, joint_q)
         self.cartpoles.set_attribute("joint_qd", self.state_0, joint_qd)
@@ -189,18 +190,12 @@ class GeneticCartpoleTrainer:
         self.sim_time += self.frame_dt
 
     def _compute_reward(self, obs: torch.Tensor, alive_mask: torch.Tensor):
-        cart_pos, pole1, pole2, cart_vel, pole1_vel, pole2_vel = obs.T
-        # angle_cost = 2.0 * pole1.abs() + 1.5 * pole2.abs()
-        # vel_cost = 0.05 * (cart_vel.abs() + pole1_vel.abs() + pole2_vel.abs())
-        # pos_cost = 0.1 * cart_pos.abs()
-        # reward = 1.0 - (angle_cost + vel_cost + pos_cost)
-        # fail = (pole1.abs() > 0.8) | (pole2.abs() > 0.8) | (cart_pos.abs() > 2.4)
-
-        angle_cost = 2.0 * pole1.abs()
-        vel_cost = 0.05 * (cart_vel.abs() + pole1_vel.abs())
+        cart_pos, pole, cart_vel, pole_vel = obs.T
+        angle_cost = 2.0 * pole.abs()
+        vel_cost = 0.05 * (cart_vel.abs() + pole_vel.abs())
         pos_cost = 0.1 * cart_pos.abs()
         reward = 1.0 - (angle_cost + vel_cost + pos_cost)
-        fail = (pole1.abs() > 0.8) | (cart_pos.abs() > 2.4)
+        fail = (pole.abs() > 0.8) | (cart_pos.abs() > 2.4)
 
         alive_mask = alive_mask & (~fail)
         reward = reward * alive_mask

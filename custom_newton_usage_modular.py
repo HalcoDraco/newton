@@ -1,5 +1,5 @@
 """
-Genetic algorithm training for Newton cartpole with many GPU worlds.
+Modular Genetic algorithm training for Newton cartpole with many GPU worlds.
 Run with: uv run --extra torch-cu12 custom_newton_usage.py --viewer gl
 """
 
@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass
+from typing import Tuple
 
 import torch
 import warp as wp
@@ -50,21 +51,15 @@ class Policy(torch.nn.Module):
         return self.net(x)
 
 
-class GeneticCartpoleTrainer:
-    def __init__(self, viewer, args):
+class NewtonCartpoleEnv:
+    """
+    Vectorized Environment for Newton Cartpole.
+    Compatible with RL loops (reset/step).
+    """
+
+    def __init__(self, viewer, params: GAParams):
         self.viewer = viewer
-        self.params = GAParams(
-            num_worlds=args.num_worlds,
-            generations=args.generations,
-            episode_steps=args.episode_steps,
-            elite_frac=args.elite_frac,
-            noise_std=args.noise_std,
-            hidden_size=args.hidden_size,
-            action_scale=args.action_scale,
-            force_limit=args.force_limit,
-            render_every=args.render_every,
-            seed=args.seed,
-        )
+        self.params = params
 
         torch.manual_seed(self.params.seed)
         wp.init()
@@ -77,8 +72,6 @@ class GeneticCartpoleTrainer:
         self.sim_dt = self.frame_dt / self.sim_substeps
 
         self._build_world()
-        self._build_policy()
-        self._init_population()
         self._capture_graph()
 
     def _build_world(self):
@@ -138,55 +131,84 @@ class GeneticCartpoleTrainer:
         joint_qd = wp.to_torch(self.cartpoles.get_attribute("joint_qd", self.state_0)).to(self.device)
         return torch.cat([joint_q, joint_qd], dim=1)
 
-    def _compute_reward(self, obs: torch.Tensor, alive_mask: torch.Tensor):
+    def _compute_rewards(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Unpack observations (Cart Pos, Pole Angle, Cart Vel, Pole Vel)
         cart_pos, pole, cart_vel, pole_vel = obs.T
+        
         angle_cost = 2.0 * pole.abs()
         vel_cost = 0.05 * (cart_vel.abs() + pole_vel.abs())
         pos_cost = 0.1 * cart_pos.abs()
+        
         reward = 1.0 - (angle_cost + vel_cost + pos_cost)
-        fail = (pole.abs() > 0.8) | (cart_pos.abs() > 2.4)
+        
+        # Define failure conditions (Done)
+        dones = (pole.abs() > 0.8) | (cart_pos.abs() > 2.4)
+        
+        return reward, dones
 
-        alive_mask = alive_mask & (~fail)
-        reward = reward * alive_mask
-        return reward, alive_mask
-
-    def _reset_worlds(self):
+    def reset(self) -> torch.Tensor:
         cart_positions = 0.5 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
         pole1_angles = 0.25 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
-        # pole2_angles = 0.25 * (torch.rand(self.params.num_worlds, device=self.device) - 0.5)
+        
         joint_q = torch.stack([cart_positions, pole1_angles], dim=1)
         joint_qd = torch.zeros_like(joint_q)
+        
         self.cartpoles.set_attribute("joint_q", self.state_0, joint_q)
         self.cartpoles.set_attribute("joint_qd", self.state_0, joint_qd)
+        
         if not isinstance(self.solver, newton.solvers.SolverMuJoCo):
             self.cartpoles.eval_fk(self.state_0)
+            
+        return self._get_obs()
 
-    def _apply_actions(self, actions: torch.Tensor, alive_mask: torch.Tensor):
+    def step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+        """
+        Step the environment.
+        Args:
+            actions: Tensor of shape (num_worlds, action_dim)
+        Returns:
+            obs: Tensor of shape (num_worlds, obs_dim)
+            rewards: Tensor of shape (num_worlds,)
+            dones: Tensor of shape (num_worlds,) (boolean)
+            info: Empty dict
+        """
+        # Apply actions
         joint_f = self.joint_f_template.clone()
         joint_f[:, 0] = actions
-        joint_f *= alive_mask.unsqueeze(1)
         self.cartpoles.set_attribute("joint_f", self.control, joint_f)
 
-    
-
-    def _step_sim(self):
+        # Step Simulation
         if self.graph:
             wp.capture_launch(self.graph)
         else:
             self._simulate_internal()
         self.sim_time += self.frame_dt
 
-    
+        # Get State & Rewards
+        obs = self._get_obs()
+        rewards, dones = self._compute_rewards(obs)
 
-    def _render(self):
+        return obs, rewards, dones, {}
+
+    def render(self):
         if hasattr(self.viewer, "begin_frame"):
             self.viewer.begin_frame(self.sim_time)
             self.viewer.log_state(self.state_0)
             if hasattr(self.viewer, "end_frame"):
                 self.viewer.end_frame()
-    
+
+
+class GeneticCartpoleTrainer:
+    def __init__(self, env: NewtonCartpoleEnv):
+        self.env = env
+        self.params = env.params
+        self.device = env.device
+
+        self._build_policy()
+        self._init_population()
+
     def _build_policy(self):
-        self.policy = Policy(self.obs_dim, self.params.hidden_size, action_dim=1).to(self.device)
+        self.policy = Policy(self.env.obs_dim, self.params.hidden_size, action_dim=1).to(self.device)
         self.policy.eval()
         base = {k: v.detach().to(self.device) for k, v in self.policy.named_parameters()}
         self.base_params = base
@@ -206,11 +228,12 @@ class GeneticCartpoleTrainer:
 
         self.batched_policy = vmap(policy_apply, in_dims=(params_in_dims, 0))
 
-    def _compute_actions(self, obs: torch.Tensor, alive_mask: torch.Tensor) -> torch.Tensor:
+    def _compute_actions(self, obs: torch.Tensor) -> torch.Tensor:
+        # Run policy (Vectorized for population)
         actions = self.batched_policy(self.population_params, obs)
         actions = torch.tanh(actions.squeeze(-1)) * self.params.action_scale
         actions = torch.clamp(actions, -self.params.force_limit, self.params.force_limit)
-        return actions * alive_mask
+        return actions
 
     def _mutate(self, elite_idx: torch.Tensor) -> dict[str, torch.Tensor]:
         new_params: dict[str, torch.Tensor] = {}
@@ -228,26 +251,36 @@ class GeneticCartpoleTrainer:
         best_params = None
 
         for gen in range(self.params.generations):
-            if hasattr(self.viewer, "is_running") and not self.viewer.is_running():
+            if hasattr(self.env.viewer, "is_running") and not self.env.viewer.is_running():
                 break
 
             gen_start = time.perf_counter()
-            self._reset_worlds()
+            
+            # Reset Environment
+            obs = self.env.reset()
             episode_returns = torch.zeros(self.params.num_worlds, device=self.device)
             alive_mask = torch.ones(self.params.num_worlds, device=self.device, dtype=torch.bool)
-            obs = self._get_obs()
 
             for step in range(self.params.episode_steps):
-                actions = self._compute_actions(obs, alive_mask)
-                self._apply_actions(actions, alive_mask)
-                self._step_sim()
-                obs = self._get_obs()
-                reward, alive_mask = self._compute_reward(obs, alive_mask)
+                # 1. Compute Actions
+                actions = self._compute_actions(obs)
+                
+                # Mask actions for dead agents (to match original behavior)
+                masked_actions = actions * alive_mask
+               
+                # 2. Step Environment
+                obs, reward, dones, _ = self.env.step(masked_actions)
+                
+                # 3. Handle Lifecycle (Alive Masking)
+                # In original code, once failed, reward is stopped.
+                alive_mask = alive_mask & (~dones)
+                reward = reward * alive_mask
                 episode_returns += reward
 
                 if self.params.render_every > 0 and gen % self.params.render_every == 0:
-                    self._render()
+                    self.env.render()
 
+            # --- Evolution Step (Same as before) ---
             mean_reward = episode_returns.mean().item()
             top_reward, top_idx = torch.max(episode_returns, dim=0)
             if top_reward.item() > best_reward:
@@ -268,8 +301,6 @@ class GeneticCartpoleTrainer:
 
         if best_params is not None:
             self.population_params = {k: v.unsqueeze(0).expand(self.params.num_worlds, *v.shape) for k, v in best_params.items()}
-
-    
 
 
 def make_parser():
@@ -293,7 +324,23 @@ def main():
     if args.viewer == "null":
         args.render_every = 0
 
-    trainer = GeneticCartpoleTrainer(viewer, args)
+    # 1. Initialize Environment
+    params = GAParams(
+        num_worlds=args.num_worlds,
+        generations=args.generations,
+        episode_steps=args.episode_steps,
+        elite_frac=args.elite_frac,
+        noise_std=args.noise_std,
+        hidden_size=args.hidden_size,
+        action_scale=args.action_scale,
+        force_limit=args.force_limit,
+        render_every=args.render_every,
+        seed=args.seed,
+    )
+    env = NewtonCartpoleEnv(viewer, params)
+
+    # 2. Initialize and Run Trainer
+    trainer = GeneticCartpoleTrainer(env)
     trainer.train()
 
     if hasattr(viewer, "close"):

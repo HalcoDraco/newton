@@ -93,10 +93,10 @@ class GeneticCartpoleTrainer:
             collapse_fixed_joints=False,
             enable_self_collisions=False,
         )
-        world.joint_q[-3:] = [0.0, 0.2, 0.0]
+        world.joint_q[-3:] = [0.0, 0.3, 0.0]
 
         scene = newton.ModelBuilder()
-        scene.replicate(world, num_worlds=self.params.num_worlds, spacing=(2.0, 2.0, 0.0))
+        scene.replicate(world, num_worlds=self.params.num_worlds, spacing=(1.0, 2.0, 0.0))
 
         self.model = scene.finalize()
         self.solver = newton.solvers.SolverMuJoCo(self.model, disable_contacts=True)
@@ -109,8 +109,8 @@ class GeneticCartpoleTrainer:
 
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
         self.viewer.set_model(self.model)
-        if hasattr(self.viewer, "set_world_offsets"):
-            self.viewer.set_world_offsets((2.0, 2.0, 0.0))
+        # if hasattr(self.viewer, "set_world_offsets"):
+        #     self.viewer.set_world_offsets((2.0, 2.0, 0.0))
 
         self.obs_dim = 2 * self.cartpoles.joint_coord_count
         self.joint_f_template = torch.zeros(

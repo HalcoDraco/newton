@@ -71,7 +71,7 @@ class RandomTrainer(TrainerBase):
 
         for gen in range(cfg.generations):
             # Check if viewer is still running
-            if hasattr(self.env.viewer, "is_running") and not self.env.viewer.is_running():
+            if self.env.viewer is not None and hasattr(self.env.viewer, "is_running") and not self.env.viewer.is_running():
                 break
 
             gen_start = time.perf_counter()

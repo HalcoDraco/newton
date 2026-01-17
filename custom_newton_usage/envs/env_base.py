@@ -147,7 +147,8 @@ class NewtonEnvBase(ABC):
 
     def _setup_viewer(self) -> None:
         """Setup viewer with model. Override for custom viewer setup."""
-        self.viewer.set_model(self.model)
+        if self.viewer is not None and hasattr(self.viewer, "set_model"):
+            self.viewer.set_model(self.model)
 
     def _capture_graph(self) -> None:
         """Capture CUDA graph for simulation."""
@@ -188,6 +189,8 @@ class NewtonEnvBase(ABC):
 
     def render(self) -> None:
         """Render current state."""
+        if self.viewer is None:
+            return
         if hasattr(self.viewer, "begin_frame"):
             self.viewer.begin_frame(self.sim_time)
             self.viewer.log_state(self.state_0)
@@ -198,5 +201,5 @@ class NewtonEnvBase(ABC):
 
     def close(self) -> None:
         """Clean up resources."""
-        if hasattr(self.viewer, "close"):
+        if self.viewer is not None and hasattr(self.viewer, "close"):
             self.viewer.close()

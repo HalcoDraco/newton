@@ -25,6 +25,9 @@ from .config_base import EnvConfig
 class CartpoleConfig(EnvConfig):
     """Configuration for Cartpole environment."""
 
+    fps: int = 60
+    sim_substeps: int = 2
+
     # World layout
     spacing: Tuple[float, float, float] = (0.8, 4.0, 0.0)
 

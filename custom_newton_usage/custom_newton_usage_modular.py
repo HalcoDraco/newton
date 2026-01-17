@@ -42,10 +42,10 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from custom_newton_usage.envs import CartpoleEnv
-from custom_newton_usage.envs.configs import CartpoleConfig
-from custom_newton_usage.trainers.configs import RandomTrainerConfig
-from custom_newton_usage.trainers import RandomTrainer
+from custom_newton_usage.envs import CartpoleEnv, AllegroHandEnv
+from custom_newton_usage.envs.configs import CartpoleConfig, AllegroHandConfig
+from custom_newton_usage.trainers.configs import RandomTrainerConfig, GeneticTrainerConfig
+from custom_newton_usage.trainers import RandomTrainer, GeneticTrainer
 
 # =============================================================================
 # CLI and Main
@@ -74,65 +74,74 @@ def make_parser():
 
 
 def main():
-    parser = make_parser()
-    viewer, args = newton.examples.init(parser)
-
-    if args.viewer == "null":
-        args.render_every = 0
-
-    # Create environment config
-    env_config = CartpoleConfig(
-        num_worlds=args.num_worlds,
-        seed=args.seed,
-    )
-
-    # Create trainer config
-    trainer_config = RandomTrainerConfig()
-
-    # Initialize environment and trainer
-    env = CartpoleEnv(viewer, env_config)
-    trainer = RandomTrainer(env, trainer_config)
-
-    # Train
-    trainer.train()
-
-    # Cleanup
-    env.close()
     # parser = make_parser()
     # viewer, args = newton.examples.init(parser)
 
     # if args.viewer == "null":
     #     args.render_every = 0
 
-    # # Create environment config (using AllegroHand)
-    # env_config = AllegroHandConfig(
+    # # Create environment config
+    # env_config = CartpoleConfig(
     #     num_worlds=args.num_worlds,
     #     seed=args.seed,
     # )
 
     # # Create trainer config
-    # # Note: action_scale and force_limit are less relevant for position control
-    # trainer_config = GeneticTrainerConfig(
-    #     generations=args.generations,
-    #     episode_steps=args.episode_steps,
-    #     elite_frac=args.elite_frac,
-    #     noise_std=args.noise_std,
-    #     hidden_size=args.hidden_size,
-    #     action_scale=1.0,  # Actions are [-1, 1] for position targets
-    #     force_limit=1.0,   # Clamp to [-1, 1]
-    #     render_every=args.render_every,
-    # )
+    # trainer_config = RandomTrainerConfig()
 
     # # Initialize environment and trainer
-    # env = AllegroHandEnv(viewer, env_config)
-    # env = CartpoleEnv(viewer, )
-    # trainer = GeneticTrainer(env, trainer_config)
+    # env = CartpoleEnv(viewer, env_config)
+    # trainer = RandomTrainer(env, trainer_config)
 
     # # Train
     # trainer.train()
 
     # # Cleanup
     # env.close()
+
+
+    parser = make_parser()
+    viewer, args = newton.examples.init(parser)
+
+    if args.viewer == "null":
+        args.render_every = 0
+        viewer = None
+
+    # Create environment config (using AllegroHand)
+    env_config = AllegroHandConfig(
+        num_worlds=args.num_worlds,
+        seed=args.seed,
+    )
+
+    # env_config = CartpoleConfig(
+    #     num_worlds=args.num_worlds,
+    #     seed=args.seed,
+    # )
+
+    # Create trainer config
+    # Note: action_scale and force_limit are less relevant for position control
+    # trainer_config = RandomTrainerConfig()
+    trainer_config = GeneticTrainerConfig(
+        generations=args.generations,
+        episode_steps=args.episode_steps,
+        elite_frac=args.elite_frac,
+        noise_std=args.noise_std,
+        hidden_size=args.hidden_size,
+        action_scale=10.0,  # Actions are [-1, 1] for position targets
+        force_limit=40.0,   # Clamp to [-1, 1]
+        render_every=args.render_every,
+    )
+
+    # Initialize environment and trainer
+    env = AllegroHandEnv(viewer, env_config)
+    # env = CartpoleEnv(viewer, env_config)
+    trainer = GeneticTrainer(env, trainer_config)
+
+    # Train
+    trainer.train()
+
+    # Cleanup
+    env.close()
 
 
 if __name__ == "__main__":

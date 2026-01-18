@@ -353,6 +353,18 @@ class SolverMuJoCo(SolverBase):
                 mjcf_attribute_name="solref",
             )
         )
+        builder.add_custom_attribute(
+            ModelBuilder.CustomAttribute(
+                name="eq_solimp",
+                frequency=ModelAttributeFrequency.EQUALITY_CONSTRAINT,
+                assignment=ModelAttributeAssignment.MODEL,
+                dtype=vec5,
+                default=vec5(0.9, 0.95, 0.001, 0.5, 2.0),
+                namespace="mujoco",
+                usd_attribute_name="mjc:solimp",
+                mjcf_attribute_name="solimp",
+            )
+        )
 
         # --- Pair attributes (from MJCF <pair> tag) ---
         # Explicit contact pairs with custom properties. Only pairs from the template world are used.
@@ -2343,7 +2355,7 @@ class SolverMuJoCo(SolverBase):
             # "light_poscom0",
             # "light_pos0",
             "eq_solref",
-            # "eq_solimp",
+            "eq_solimp",
             # "eq_data",
             # "actuator_dynprm",
             "actuator_gainprm",
@@ -2365,6 +2377,11 @@ class SolverMuJoCo(SolverBase):
             # "tendon_length0",
             # "tendon_invweight0",
             # "mat_rgba",
+        }
+
+        # Fields in mj_model.opt to expand
+        opt_fields_to_expand = {
+            "gravity",
         }
 
         def tile(x: wp.array):
@@ -2393,6 +2410,11 @@ class SolverMuJoCo(SolverBase):
             if field in model_fields_to_expand:
                 array = getattr(mj_model, field)
                 setattr(mj_model, field, tile(array))
+
+        for field in mj_model.opt.__dataclass_fields__:
+            if field in opt_fields_to_expand:
+                array = getattr(mj_model.opt, field)
+                setattr(mj_model.opt, field, tile(array))
 
     def update_model_inertial_properties(self):
         if self.model.body_count == 0:
@@ -2661,20 +2683,23 @@ class SolverMuJoCo(SolverBase):
 
         num_worlds = self.mjc_eq_to_newton_eq.shape[0]
 
-        # Get custom attribute for eq_solref
+        # Get custom attributes for eq_solref and eq_solimp
         mujoco_attrs = getattr(self.model, "mujoco", None)
         eq_solref = getattr(mujoco_attrs, "eq_solref", None) if mujoco_attrs is not None else None
+        eq_solimp = getattr(mujoco_attrs, "eq_solimp", None) if mujoco_attrs is not None else None
 
-        if eq_solref is not None:
+        if eq_solref is not None or eq_solimp is not None:
             wp.launch(
                 update_eq_properties_kernel,
                 dim=(num_worlds, neq),
                 inputs=[
                     self.mjc_eq_to_newton_eq,
                     eq_solref,
+                    eq_solimp,
                 ],
                 outputs=[
                     self.mjw_model.eq_solref,
+                    self.mjw_model.eq_solimp,
                 ],
                 device=self.model.device,
             )

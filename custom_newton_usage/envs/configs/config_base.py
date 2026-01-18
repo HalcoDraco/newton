@@ -24,15 +24,23 @@ torch.set_float32_matmul_precision("medium")
 class EnvConfig:
     """Base configuration for Newton environments."""
 
-    num_worlds: int
-    fps: int = 60
-    sim_substeps: int = 10
+    # Number of parallel environments
+    num_worlds: int 
+
+    # Maximum number of parallel environments. 
+    # If num_worlds > max_num_worlds, environments will be stepped in batches
+    # with size (num_worlds / ((num_worlds // max_num_worlds) + 1))
+    max_num_worlds: int 
+
+    # Timing
+    control_hz: int = 20
+    physics_hz: int = 100
+
+    assert physics_hz % control_hz == 0, "physics_hz must be multiple of control_hz"
+
+    sim_substeps: int = physics_hz // control_hz
+
+    sim_dt: float = 1.0 / physics_hz
+    frame_dt: float = 1.0 / control_hz
+
     seed: int = 0
-
-    @property
-    def frame_dt(self) -> float:
-        return 1.0 / self.fps
-
-    @property
-    def sim_dt(self) -> float:
-        return self.frame_dt / self.sim_substeps

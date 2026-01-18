@@ -39,13 +39,13 @@ class AllegroHandConfig(EnvConfig):
 
     # Solver settings
     solver_type: str = "newton"
-    integrator: str = "implicit"
+    integrator: str = "implicitfast"
     njmax: int = 200
     nconmax: int = 150
     impratio: float = 10.0
     cone: str = "elliptic"
     iterations: int = 100
-    ls_iterations: int = 15
+    ls_iterations: int = 50
 
     # Task: cube height target
     cube_target_height: float = 0.5  # Target height for cube

@@ -120,22 +120,23 @@ def main():
 
     # Create trainer config
     # Note: action_scale and force_limit are less relevant for position control
-    # trainer_config = RandomTrainerConfig()
-    trainer_config = GeneticTrainerConfig(
-        generations=args.generations,
-        episode_steps=args.episode_steps,
-        elite_frac=args.elite_frac,
-        noise_std=args.noise_std,
-        hidden_size=args.hidden_size,
-        action_scale=10.0,  # Actions are [-1, 1] for position targets
-        force_limit=40.0,   # Clamp to [-1, 1]
-        render_every=args.render_every,
-    )
+    trainer_config = RandomTrainerConfig()
+    # trainer_config = GeneticTrainerConfig(
+    #     generations=args.generations,
+    #     episode_steps=args.episode_steps,
+    #     elite_frac=args.elite_frac,
+    #     noise_std=args.noise_std,
+    #     hidden_size=args.hidden_size,
+    #     action_scale=10.0,  # Actions are [-1, 1] for position targets
+    #     force_limit=40.0,   # Clamp to [-1, 1]
+    #     render_every=args.render_every,
+    # )
 
     # Initialize environment and trainer
     env = AllegroHandEnv(viewer, env_config)
     # env = CartpoleEnv(viewer, env_config)
-    trainer = GeneticTrainer(env, trainer_config)
+    # trainer = GeneticTrainer(env, trainer_config)
+    trainer = RandomTrainer(env, trainer_config)
 
     # Train
     trainer.train()

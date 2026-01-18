@@ -28,8 +28,8 @@ class AllegroHandConfig(EnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)
-    fps: int = 50
-    sim_substeps: int = 8
+    fps: int = 60
+    sim_substeps: int = 2
 
     # Physics
     shape_ke: float = 1.0e3  # Contact stiffness
@@ -39,13 +39,13 @@ class AllegroHandConfig(EnvConfig):
 
     # Solver settings
     solver_type: str = "newton"
-    integrator: str = "implicitfast"
+    integrator: str = "implicit"
     njmax: int = 200
     nconmax: int = 150
     impratio: float = 10.0
     cone: str = "elliptic"
     iterations: int = 100
-    ls_iterations: int = 50
+    ls_iterations: int = 15
 
     # Task: cube height target
     cube_target_height: float = 0.5  # Target height for cube

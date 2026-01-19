@@ -19,10 +19,10 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from .base_cfg import EnvConfig
+from .base_cfg import BaseEnvConfig
 
 @dataclass
-class CartpoleConfig(EnvConfig):
+class CartpoleConfig(BaseEnvConfig):
     """Configuration for Cartpole environment."""
 
     control_hz: int = 60

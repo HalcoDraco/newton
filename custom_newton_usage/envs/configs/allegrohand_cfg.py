@@ -19,12 +19,12 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from .base_cfg import EnvConfig
+from .base_cfg import BaseEnvConfig
 
 
 
 @dataclass
-class AllegroHandConfig(EnvConfig):
+class AllegroHandConfig(BaseEnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)

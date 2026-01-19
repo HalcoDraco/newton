@@ -20,7 +20,7 @@ torch.set_float32_matmul_precision("medium")
 
 
 @dataclass
-class EnvConfig:
+class BaseEnvConfig:
     """Base configuration for Newton environments."""
 
     seed: int = 42

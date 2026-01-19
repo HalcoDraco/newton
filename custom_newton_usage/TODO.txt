@@ -1,1 +1,0 @@
-test --headless vs not --headless when --viewer null

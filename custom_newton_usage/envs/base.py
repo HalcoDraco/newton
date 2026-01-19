@@ -19,12 +19,12 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from .configs import EnvConfig
+from .configs import BaseEnvConfig
 
 
 class NewtonBaseEnv(ABC):
 
-    def __init__(self, viewer: newton.viewer.ViewerNull | newton.viewer.ViewerGL, config: EnvConfig):
+    def __init__(self, viewer: newton.viewer.ViewerNull | newton.viewer.ViewerGL, config: BaseEnvConfig):
 
         assert config.physics_hz % config.control_hz == 0, "physics_hz must be multiple of control_hz"
 
@@ -73,14 +73,14 @@ class NewtonBaseEnv(ABC):
         pass
 
     @abstractmethod
-    def _build_model(self, config: EnvConfig) -> newton.Model:
+    def _build_model(self, config: BaseEnvConfig) -> newton.Model:
         """
         Build the Newton model.
         call finalize()
         """
         pass
 
-    def _build_solver(self, model, config: EnvConfig) -> Any:
+    def _build_solver(self, model, config: BaseEnvConfig) -> Any:
         """Helper to build solver from config."""
         if config.solver_class == "SolverMuJoCo":
             solver = newton.solvers.SolverMuJoCo(

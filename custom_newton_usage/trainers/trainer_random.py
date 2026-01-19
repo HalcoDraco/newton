@@ -104,6 +104,9 @@ class RandomTrainer(TrainerBase):
                 if cfg.render_every > 0 and gen % cfg.render_every == 0:
                     self.env.render()
 
+                if not alive_mask.any():
+                    break  # All agents are done
+
             # Logging
             mean_reward = episode_returns.mean().item()
             top_reward = episode_returns.max().item()
@@ -114,14 +117,18 @@ class RandomTrainer(TrainerBase):
             total_reward_sum += mean_reward
             total_episodes += 1
 
+            # Logging
             elapsed = time.perf_counter() - gen_start
-            frames = cfg.episode_steps * self.env.num_worlds
-            fps = frames / elapsed if elapsed > 0 else float("inf")
-
+            control_steps = (step + 1) * self.env.num_worlds
+            steps_per_s = control_steps / elapsed if elapsed > 0 else float("inf")
+            physics_steps = control_steps * self.env.sim_substeps
+            physics_steps_per_s = physics_steps / elapsed if elapsed > 0 else float("inf")
             print(
-                f"[Episode {gen:03d}] mean_reward={mean_reward:.3f} "
-                f"best_episode={top_reward:.3f} "
-                f"best_all={best_reward:.3f} time={elapsed:.2f}s fps={fps:.1f}"
+                f"[Gen {gen:03d}] mean_reward={mean_reward:.3f} "
+                f"best_all={best_reward:.3f} "
+                f"time={elapsed:.2f}s "
+                f"fps={steps_per_s:.1f} "
+                f"physics_fps={physics_steps_per_s:.1f}"
             )
 
         # Final statistics

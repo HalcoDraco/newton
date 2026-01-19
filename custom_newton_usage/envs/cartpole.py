@@ -26,6 +26,10 @@ class CartpoleEnv(NewtonBaseEnv):
     def action_dim(self) -> int:
         return 1
     
+    def _setup_viewer(self) -> None:
+        super()._setup_viewer()
+        self.viewer.set_world_offsets(self.config.spacing)
+    
     def _build_model(self, config: CartpoleConfig) -> newton.Model:
         
         world = newton.ModelBuilder()

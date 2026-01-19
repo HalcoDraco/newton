@@ -25,7 +25,7 @@ from .base_cfg import EnvConfig
 class CartpoleConfig(EnvConfig):
     """Configuration for Cartpole environment."""
 
-    control_hz: int = 20
+    control_hz: int = 60
     physics_hz: int = 120
 
     # World layout

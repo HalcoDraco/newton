@@ -57,7 +57,7 @@ class NewtonBaseEnv(ABC):
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
 
         self._define_articulation_views()
-        self.viewer.set_model(self.model)
+        self._setup_viewer()
         self._capture_cuda_graph()
 
     @property
@@ -117,6 +117,9 @@ class NewtonBaseEnv(ABC):
     def _define_articulation_views(self) -> None:
         """Define articulation views for efficient batch access."""
         pass
+
+    def _setup_viewer(self) -> None:
+        self.viewer.set_model(self.model)
 
     def _capture_cuda_graph(self) -> None:
         """Capture CUDA graph for simulation."""

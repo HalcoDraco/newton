@@ -167,7 +167,7 @@ class GeneticTrainer(TrainerBase):
                     masked_actions = actions * alive_mask.unsqueeze(-1)
 
                 # Step environment
-                obs, reward, dones, _ = self.env.step(masked_actions)
+                obs, reward, dones = self.env.step(masked_actions)
 
                 # Update alive mask and accumulate rewards
                 alive_mask = alive_mask & (~dones)

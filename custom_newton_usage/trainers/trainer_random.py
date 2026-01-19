@@ -20,7 +20,7 @@ from newton.solvers import SolverNotifyFlags
 torch.set_float32_matmul_precision("medium")
 
 from .configs import RandomTrainerConfig
-from custom_newton_usage.envs import NewtonEnvBase
+from custom_newton_usage.envs import NewtonBaseEnv
 from .trainer_base import TrainerBase
 
 
@@ -33,7 +33,7 @@ class RandomTrainer(TrainerBase):
     Useful as a baseline for comparison with learning algorithms.
     """
 
-    def __init__(self, env: NewtonEnvBase, config: RandomTrainerConfig):
+    def __init__(self, env: NewtonBaseEnv, config: RandomTrainerConfig):
         super().__init__(env, config)
         self._config = config
 
@@ -93,7 +93,7 @@ class RandomTrainer(TrainerBase):
                     masked_actions = actions * alive_mask.unsqueeze(-1)
 
                 # Step environment
-                obs, reward, dones, _ = self.env.step(masked_actions)
+                obs, reward, dones = self.env.step(masked_actions)
 
                 # Update alive mask and accumulate rewards
                 alive_mask = alive_mask & (~dones)

@@ -42,7 +42,7 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from custom_newton_usage.envs import CartpoleEnv, AllegroHandEnv
+from custom_newton_usage.envs import CartpoleTorchEnv, AllegroHandEnv
 from custom_newton_usage.envs.configs import CartpoleConfig, AllegroHandConfig
 from custom_newton_usage.trainers.configs import RandomTrainerConfig, GeneticTrainerConfig
 from custom_newton_usage.trainers import RandomTrainer, GeneticTrainer
@@ -105,18 +105,17 @@ def main():
 
     if args.viewer == "null":
         args.render_every = 0
-        viewer = None
 
     # Create environment config (using AllegroHand)
-    env_config = AllegroHandConfig(
-        num_worlds=args.num_worlds,
-        seed=args.seed,
-    )
-
-    # env_config = CartpoleConfig(
+    # env_config = AllegroHandConfig(
     #     num_worlds=args.num_worlds,
     #     seed=args.seed,
     # )
+
+    env_config = CartpoleConfig(
+        num_worlds=args.num_worlds,
+        seed=args.seed,
+    )
 
     # Create trainer config
     # Note: action_scale and force_limit are less relevant for position control
@@ -133,8 +132,8 @@ def main():
     # )
 
     # Initialize environment and trainer
-    env = AllegroHandEnv(viewer, env_config)
-    # env = CartpoleEnv(viewer, env_config)
+    # env = AllegroHandEnv(viewer, env_config)
+    env = CartpoleTorchEnv(viewer, env_config)
     # trainer = GeneticTrainer(env, trainer_config)
     trainer = RandomTrainer(env, trainer_config)
 

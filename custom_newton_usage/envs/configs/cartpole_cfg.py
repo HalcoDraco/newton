@@ -19,14 +19,14 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from .config_base import EnvConfig
+from .base_cfg import EnvConfig
 
 @dataclass
 class CartpoleConfig(EnvConfig):
     """Configuration for Cartpole environment."""
 
-    fps: int = 60
-    sim_substeps: int = 2
+    control_hz: int = 20
+    physics_hz: int = 120
 
     # World layout
     spacing: Tuple[float, float, float] = (0.8, 4.0, 0.0)
@@ -47,3 +47,5 @@ class CartpoleConfig(EnvConfig):
     # Termination thresholds
     pole_angle_threshold: float = 0.8
     cart_pos_threshold: float = 2.4
+
+    disable_contacts: bool = True

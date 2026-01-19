@@ -20,7 +20,7 @@ from newton.solvers import SolverNotifyFlags
 torch.set_float32_matmul_precision("medium")
 
 from .configs import TrainerConfig
-from custom_newton_usage.envs import NewtonEnvBase
+from custom_newton_usage.envs import NewtonBaseEnv
 
 
 class TrainerBase(ABC):
@@ -31,7 +31,7 @@ class TrainerBase(ABC):
     specific training algorithms (GA, PPO, SAC, etc.)
     """
 
-    def __init__(self, env: NewtonEnvBase, config: TrainerConfig):
+    def __init__(self, env: NewtonBaseEnv, config: TrainerConfig):
         self.env = env
         self.config = config
         self.device = env.device

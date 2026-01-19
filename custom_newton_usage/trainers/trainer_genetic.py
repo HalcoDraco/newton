@@ -20,7 +20,7 @@ from newton.solvers import SolverNotifyFlags
 torch.set_float32_matmul_precision("medium")
 
 from .configs import GeneticTrainerConfig
-from custom_newton_usage.envs import NewtonEnvBase
+from custom_newton_usage.envs import NewtonBaseEnv
 from .trainer_base import TrainerBase
 
 
@@ -50,7 +50,7 @@ class GeneticTrainer(TrainerBase):
     in parallel, and evolves via elitism + mutation.
     """
 
-    def __init__(self, env: NewtonEnvBase, config: GeneticTrainerConfig):
+    def __init__(self, env: NewtonBaseEnv, config: GeneticTrainerConfig):
         super().__init__(env, config)
         self._config = config
 

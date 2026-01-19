@@ -1,3 +1,3 @@
-from .config_base import EnvConfig
-from .config_cartpole import CartpoleConfig
-from .config_allegrohand import AllegroHandConfig
+from .base_cfg import EnvConfig
+from .cartpole_cfg import CartpoleConfig
+from .allegrohand_cfg import AllegroHandConfig

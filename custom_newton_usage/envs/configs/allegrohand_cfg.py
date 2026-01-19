@@ -19,7 +19,7 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from .config_base import EnvConfig
+from .base_cfg import EnvConfig
 
 
 
@@ -28,8 +28,8 @@ class AllegroHandConfig(EnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)
-    fps: int = 60
-    sim_substeps: int = 2
+    control_hz: int = 50
+    physics_hz: int = 400
 
     # Physics
     shape_ke: float = 1.0e3  # Contact stiffness
@@ -38,7 +38,7 @@ class AllegroHandConfig(EnvConfig):
     joint_target_kd: float = 5.0  # Joint drive damping
 
     # Solver settings
-    solver_type: str = "newton"
+    solver: str = "newton"
     integrator: str = "implicitfast"
     njmax: int = 200
     nconmax: int = 150

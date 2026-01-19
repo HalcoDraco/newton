@@ -1,3 +1,3 @@
-from .env_base import NewtonEnvBase
-from .env_cartpole import CartpoleEnv
+from .base import NewtonBaseEnv
+from .cartpole import CartpoleEnv, CartpoleTorchEnv
 from .env_allegro import AllegroHandEnv

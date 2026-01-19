@@ -12,11 +12,11 @@ from newton.selection import ArticulationView
 
 torch.set_float32_matmul_precision("medium")
 
-from .env_base import NewtonEnvBase
+from .base import NewtonBaseEnv
 from .configs import AllegroHandConfig
 
 
-class AllegroHandEnv(NewtonEnvBase):
+class AllegroHandEnv(NewtonBaseEnv):
     """
     Vectorized Allegro Hand environment with cube manipulation task.
 
@@ -99,6 +99,7 @@ class AllegroHandEnv(NewtonEnvBase):
         # Create ArticulationView for efficient batch access to hand joints
         # This provides optimized get/set methods for joint data across all worlds
         self.articulation = ArticulationView(self.model, "*Robot*", verbose=False)
+        self.cube_view = ArticulationView(self.model, "*/object", verbose=False)
 
         # Forward kinematics
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.model)
@@ -143,7 +144,7 @@ class AllegroHandEnv(NewtonEnvBase):
             dtype=torch.float32,
         )
 
-    def _simulate_internal(self) -> None:
+    def _simulate(self) -> None:
         # MuJoCo solver handles collision detection internally when contacts=None
         for _ in range(self.sim_substeps):
             self.state_0.clear_forces()
@@ -163,12 +164,10 @@ class AllegroHandEnv(NewtonEnvBase):
         joint_qd = wp.to_torch(self.articulation.get_attribute("joint_qd", self.state_0)).to(self.device)
 
         # Get cube body positions and velocities
-        body_q = wp.to_torch(self.state_0.body_q).to(self.device)  # (num_bodies, 7)
-        body_qd = wp.to_torch(self.state_0.body_qd).to(self.device)  # (num_bodies, 6)
-
-        # Extract cube for each world
-        cube_pos = body_q[self._cube_body_indices, :3]  # xyz position
-        cube_vel = body_qd[self._cube_body_indices, :3]  # linear velocity
+        cube_body_q = wp.to_torch(self.cube_view.get_attribute("body_q", self.state_0)).to(self.device)  # Shape: (num_worlds, 7) [pos + quat]
+        cube_body_qd = wp.to_torch(self.cube_view.get_attribute("body_qd", self.state_0)).to(self.device)  # Shape: (num_worlds, 6) [lin vel + ang vel]
+        cube_pos = cube_body_q[:, :3]  # xyz
+        cube_vel = cube_body_qd[:, :3]  # linear vel
 
         # Concatenate all observations
         obs = torch.cat([joint_q, joint_qd, cube_pos, cube_vel], dim=1)

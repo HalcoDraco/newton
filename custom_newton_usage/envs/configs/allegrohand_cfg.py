@@ -63,3 +63,7 @@ class AllegroHandConfig(BaseEnvConfig):
 
     # Initial grasp position for joints
     initial_grasp_pos: float = 0.3
+
+    # Initial cube position [x, y, z] - set to None to use USD default (above hand)
+    # For in-hand start, use something like [0.0, -0.15, 1.0]
+    initial_cube_position: tuple[float, float, float] | None = (0.0, -0.15, 1.1)

@@ -74,6 +74,21 @@ class AllegroHandEnv(NewtonBaseEnv):
             allegro_hand.joint_target_kd[i] = config.joint_target_kd
             allegro_hand.joint_target_pos[i] = config.initial_grasp_pos
 
+        # Modify cube's initial position if specified
+        # The cube's floating joint DOFs store [x, y, z, qx, qy, qz, qw]
+        # Find the cube's joint and modify its position
+        if config.initial_cube_position is not None:
+            # Find the cube joint (it's a floating joint for DexCube)
+            for i, key in enumerate(allegro_hand.joint_key):
+                if "joint_22" in key or "DexCube" in key.lower():
+                    # Get the DOF start for this joint
+                    dof_start = allegro_hand.joint_q_start[i]
+                    # Set position [x, y, z]
+                    allegro_hand.joint_q[dof_start + 0] = config.initial_cube_position[0]
+                    allegro_hand.joint_q[dof_start + 1] = config.initial_cube_position[1]
+                    allegro_hand.joint_q[dof_start + 2] = config.initial_cube_position[2]
+                    break
+
         # Replicate across worlds
         builder = newton.ModelBuilder()
         builder.replicate(allegro_hand, self.num_worlds)
@@ -95,6 +110,9 @@ class AllegroHandEnv(NewtonBaseEnv):
         # ArticulationView for the cube (DexCube articulation)
         # Pattern "*DexCube" matches articulation keys like "/World/envs/env_0/object/DexCube"
         self.cube_articulation = ArticulationView(self.model, "*DexCube", verbose=False)
+
+        # NOTE: eval_fk was already called in base.__init__ after _build_model
+        # Now model.body_q contains FK-computed transforms
 
         # Store initial state as Warp arrays for efficient reset (GPU-to-GPU copy)
         self._initial_joint_q = wp.clone(self.model.joint_q)
@@ -228,6 +246,10 @@ class AllegroHandEnv(NewtonBaseEnv):
         wp.copy(self.state_0.joint_qd, self._initial_joint_qd)
         wp.copy(self.state_0.body_q, self._initial_body_q)
         wp.copy(self.state_0.body_qd, self._initial_body_qd)
+
+        # ALSO copy joint_q to model.joint_q so eval_fk in base.reset() uses correct values
+        wp.copy(self.model.joint_q, self._initial_joint_q)
+        wp.copy(self.model.joint_qd, self._initial_joint_qd)
 
         # Reset control targets to initial grasp position
         self._joint_target_template.fill_(self.config.initial_grasp_pos)

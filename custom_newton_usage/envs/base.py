@@ -48,13 +48,13 @@ class NewtonBaseEnv(ABC):
         self.sim_time = 0.0
 
         self.model = self._build_model(config)
-        self.contacts = None
+        newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.model)
         self.solver = self._build_solver(self.model, config)
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
         self.control = self.model.control()
-        newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
+        self.contacts = self._collide()
 
         self._define_articulation_views()
         self._setup_viewer()
@@ -109,10 +109,13 @@ class NewtonBaseEnv(ABC):
                 include_sites=config.include_sites,
             )
 
-            self.contacts = None # No external collision detection needed - MuJoCo handles it internally
         else:
             raise ValueError(f"Unsupported solver class: {config.solver_class}")
         return solver
+    
+    def _collide(self) -> wp.array:
+        """Compute contacts for current state."""
+        return None
 
     def _define_articulation_views(self) -> None:
         """Define articulation views for efficient batch access."""
@@ -131,6 +134,7 @@ class NewtonBaseEnv(ABC):
     
     def _simulate(self) -> None:
         """Run simulation substeps to perform a single control step."""
+        self.contacts = self._collide()
         for _ in range(self.sim_substeps):
             self.state_0.clear_forces()
             self.viewer.apply_forces(self.state_0)

@@ -26,5 +26,5 @@ from .config_base import TrainerConfig
 class RandomTrainerConfig(TrainerConfig):
     """Configuration for Random Action trainer (baseline)."""
 
-    action_scale: float = 1.0  # Scale for random actions
-    action_limit: float = 1.0  # Clamp actions to [-limit, limit]
+    action_scale: float = 10.0  # Scale for random actions
+    action_limit: float = 10.0  # Clamp actions to [-limit, limit]

@@ -37,7 +37,7 @@ class AllegroHandConfig(BaseEnvConfig):
     joint_target_ke: float = 150.0  # Joint drive stiffness
     joint_target_kd: float = 5.0  # Joint drive damping
 
-    # Solver settings
+    # Solver settings (override base config)
     solver: str = "newton"
     integrator: str = "implicitfast"
     njmax: int = 200
@@ -47,11 +47,19 @@ class AllegroHandConfig(BaseEnvConfig):
     iterations: int = 100
     ls_iterations: int = 50
 
-    # Task: cube height target
-    cube_target_height: float = 0.5  # Target height for cube
-    cube_drop_threshold: float = 0.1  # Below this, episode ends
+    # Task: cube reorientation
+    cube_drop_threshold: float = 0.1  # Below this z-height, episode ends
 
-    # Reward weights
-    height_reward_weight: float = 1.0
-    action_penalty_weight: float = 0.01
-    velocity_penalty_weight: float = 0.001
+    # Reward weights for cube reorientation
+    orientation_reward_weight: float = 2.0  # Main task: match target orientation
+    position_reward_weight: float = 0.5  # Keep cube near starting position
+    angular_vel_penalty_weight: float = 0.01  # Penalize fast spinning
+    action_penalty_weight: float = 0.01  # Penalize large actions
+    success_bonus: float = 5.0  # Bonus for reaching target orientation
+
+    # Orientation task thresholds
+    orientation_tolerance: float = 0.1  # Quaternion distance for success
+    position_tolerance: float = 0.15  # Max position deviation from target
+
+    # Initial grasp position for joints
+    initial_grasp_pos: float = 0.3

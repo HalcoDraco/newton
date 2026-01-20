@@ -42,7 +42,7 @@ from newton.solvers import SolverNotifyFlags
 
 torch.set_float32_matmul_precision("medium")
 
-from custom_newton_usage.envs import CartpoleTorchEnv, AllegroHandEnv
+from custom_newton_usage.envs import CartpoleTorchEnv, AllegroHandTorchEnv
 from custom_newton_usage.envs.configs import CartpoleConfig, AllegroHandConfig
 from custom_newton_usage.trainers.configs import RandomTrainerConfig, GeneticTrainerConfig
 from custom_newton_usage.trainers import RandomTrainer, GeneticTrainer
@@ -107,35 +107,35 @@ def main():
         args.render_every = 0
 
     # Create environment config (using AllegroHand)
-    # env_config = AllegroHandConfig(
-    #     num_worlds=args.num_worlds,
-    #     seed=args.seed,
-    # )
-
-    env_config = CartpoleConfig(
+    env_config = AllegroHandConfig(
         num_worlds=args.num_worlds,
         seed=args.seed,
     )
 
+    # env_config = CartpoleConfig(
+    #     num_worlds=args.num_worlds,
+    #     seed=args.seed,
+    # )
+
     # Create trainer config
     # Note: action_scale and force_limit are less relevant for position control
-    # trainer_config = RandomTrainerConfig()
-    trainer_config = GeneticTrainerConfig(
-        generations=args.generations,
-        episode_steps=args.episode_steps,
-        elite_frac=args.elite_frac,
-        noise_std=args.noise_std,
-        hidden_size=args.hidden_size,
-        action_scale=10.0,  # Actions are [-1, 1] for position targets
-        force_limit=40.0,   # Clamp to [-1, 1]
-        render_every=args.render_every,
-    )
+    trainer_config = RandomTrainerConfig()
+    # trainer_config = GeneticTrainerConfig(
+    #     generations=args.generations,
+    #     episode_steps=args.episode_steps,
+    #     elite_frac=args.elite_frac,
+    #     noise_std=args.noise_std,
+    #     hidden_size=args.hidden_size,
+    #     action_scale=10.0,  # Actions are [-1, 1] for position targets
+    #     force_limit=40.0,   # Clamp to [-1, 1]
+    #     render_every=args.render_every,
+    # )
 
     # Initialize environment and trainer
-    # env = AllegroHandEnv(viewer, env_config)
-    env = CartpoleTorchEnv(viewer, env_config)
-    trainer = GeneticTrainer(env, trainer_config)
-    # trainer = RandomTrainer(env, trainer_config)
+    env = AllegroHandTorchEnv(viewer, env_config)
+    # env = CartpoleTorchEnv(viewer, env_config)
+    # trainer = GeneticTrainer(env, trainer_config)
+    trainer = RandomTrainer(env, trainer_config)
 
     # Train
     trainer.train()

@@ -1,1 +1,5 @@
-allegro cube does not spawn correctly
+benchmark
+allegro buffer for obs
+reward function allegro
+adapt for ppo
+adapt for brax

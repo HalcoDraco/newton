@@ -57,6 +57,9 @@ class CartpoleEnv(NewtonBaseEnv):
         """Define articulation views for efficient batch access."""
         self.articulation = ArticulationView(self.model, "/cartpole", verbose=False)
 
+    def _pre_allocate_buffers(self) -> None:
+        """Pre-allocate any buffers needed for simulation."""
+        
         self._joint_f_template = torch.zeros(
             (self.num_worlds, self.articulation.joint_dof_count),
             device=self.device,

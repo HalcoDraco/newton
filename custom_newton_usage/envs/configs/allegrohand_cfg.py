@@ -37,6 +37,9 @@ class AllegroHandConfig(BaseEnvConfig):
     joint_target_ke: float = 150.0  # Joint drive stiffness
     joint_target_kd: float = 5.0  # Joint drive damping
 
+    # Actions
+    action_range: tuple[float, float] = (-21.0, 21.0) # Torque in Nm
+
     # Solver settings (override base config)
     solver: str = "newton"
     integrator: str = "implicitfast"
@@ -67,3 +70,4 @@ class AllegroHandConfig(BaseEnvConfig):
     # Initial cube position [x, y, z] - set to None to use USD default (above hand)
     # For in-hand start, use something like [0.0, -0.15, 1.0]
     initial_cube_position: tuple[float, float, float] | None = (0.0, -0.15, 1.1)
+    desired_cube_position: tuple[float, float, float] = (0.0, -0.15, 0.8)

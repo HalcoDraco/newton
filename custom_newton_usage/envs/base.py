@@ -57,6 +57,7 @@ class NewtonBaseEnv(ABC):
         self.contacts = self._collide()
 
         self._define_articulation_views()
+        self._pre_allocate_buffers()
         self._setup_viewer()
         self._capture_cuda_graph()
 
@@ -121,6 +122,10 @@ class NewtonBaseEnv(ABC):
         """Define articulation views for efficient batch access."""
         pass
 
+    def _pre_allocate_buffers(self) -> None:
+        """Pre-allocate any buffers needed for simulation."""
+        pass
+
     def _setup_viewer(self) -> None:
         self.viewer.set_model(self.model)
 
@@ -150,7 +155,7 @@ class NewtonBaseEnv(ABC):
         self.sim_time += self.frame_dt
 
     @abstractmethod
-    def _apply_actions(self, actions: wp.array):
+    def _apply_actions(self, actions: wp.array) -> None:
         pass
 
     @abstractmethod
@@ -162,7 +167,7 @@ class NewtonBaseEnv(ABC):
         pass
 
     @abstractmethod
-    def _reset_state(self):
+    def _reset_state(self) -> None:
         pass
 
     def _from_warp(self, array: wp.array) -> Any:
@@ -173,14 +178,14 @@ class NewtonBaseEnv(ABC):
         """Override to convert input from desired format to warp array."""
         pass
 
-    def reset(self):
+    def reset(self) -> Any:
         self._reset_state()
         newton.eval_fk(self.model, self.model.joint_q, self.model.joint_qd, self.state_0)
         obs = self._get_obs()
         obs = wp.from_torch(obs, dtype=self.wp_dtype)
         return self._from_warp(obs)
 
-    def step(self, actions):
+    def step(self, actions) -> Tuple[Any, Any, Any]:
         actions = self._to_warp(actions)
 
         self._apply_actions(actions)

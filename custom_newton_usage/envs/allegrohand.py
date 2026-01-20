@@ -114,6 +114,8 @@ class AllegroHandEnv(NewtonBaseEnv):
         # NOTE: eval_fk was already called in base.__init__ after _build_model
         # Now model.body_q contains FK-computed transforms
 
+    def _pre_allocate_buffers(self) -> None:
+        """Pre-allocate any buffers needed for simulation."""
         # Store initial state as Warp arrays for efficient reset (GPU-to-GPU copy)
         self._initial_joint_q = wp.clone(self.model.joint_q)
         self._initial_joint_qd = wp.clone(self.model.joint_qd)
@@ -146,17 +148,18 @@ class AllegroHandEnv(NewtonBaseEnv):
     def _apply_actions(self, actions: wp.array) -> None:
         """Apply actions as joint target positions using ArticulationView."""
         # Actions shape: (num_worlds, action_dim)
-        actions_torch = wp.to_torch(actions)
+        # actions_torch = wp.to_torch(actions)
+        self._joint_target_template = wp.to_torch(actions)
 
-        expected_dim = self.hand_articulation.joint_dof_count
-        if actions_torch.shape[1] != expected_dim:
-            if actions_torch.shape[1] < expected_dim:
-                actions_torch = torch.nn.functional.pad(actions_torch, (0, expected_dim - actions_torch.shape[1]))
-            else:
-                actions_torch = actions_torch[:, :expected_dim]
+        # expected_dim = self.hand_articulation.joint_dof_count
+        # if actions_torch.shape[1] != expected_dim:
+        #     if actions_torch.shape[1] < expected_dim:
+        #         actions_torch = torch.nn.functional.pad(actions_torch, (0, expected_dim - actions_torch.shape[1]))
+        #     else:
+        #         actions_torch = actions_torch[:, :expected_dim]
 
         # Set joint target positions via ArticulationView
-        self._joint_target_template[:] = actions_torch
+        # self._joint_target_template[:] = actions_torch
         self.hand_articulation.set_attribute("joint_target_pos", self.control, self._joint_target_template)
 
     def _get_obs(self) -> torch.Tensor:
@@ -182,6 +185,7 @@ class AllegroHandEnv(NewtonBaseEnv):
         cube_ang_vel = cube_body_qd[:, 3:]  # angular velocity
 
         # Concatenate all observations including target orientation
+        # obs has size (num_worlds, obs_dim)
         obs = torch.cat([
             joint_q,
             joint_qd,
@@ -196,6 +200,7 @@ class AllegroHandEnv(NewtonBaseEnv):
 
     def _compute_rewards(self, obs: torch.Tensor) -> Tuple[wp.array, wp.array]:
         """Compute rewards for cube reorientation task."""
+        # obs has size (num_worlds, obs_dim)
         dofs = self.hand_articulation.joint_dof_count
 
         # Parse observation layout:
@@ -203,7 +208,6 @@ class AllegroHandEnv(NewtonBaseEnv):
         offset = 2 * dofs
         cube_pos = obs[:, offset:offset + 3]
         cube_quat = obs[:, offset + 3:offset + 7]
-        cube_ang_vel = obs[:, offset + 7 + 3:offset + 7 + 6]
         target_quat = obs[:, offset + 7 + 6:offset + 7 + 10]
 
         cube_z = cube_pos[:, 2]
@@ -219,16 +223,13 @@ class AllegroHandEnv(NewtonBaseEnv):
         pos_diff = torch.norm(cube_pos - self._initial_cube_pos, dim=1)
         position_reward = self.config.position_reward_weight * torch.exp(-pos_diff / self.config.position_tolerance)
 
-        # Angular velocity penalty: prefer stable reorientation
-        ang_vel_penalty = self.config.angular_vel_penalty_weight * cube_ang_vel.norm(dim=1)
-
         # Success bonus: reward reaching target orientation
         orientation_error = 1.0 - quat_dot
         success_mask = (orientation_error < self.config.orientation_tolerance).float()
         success_bonus = self.config.success_bonus * success_mask
 
         # Total reward
-        reward = orientation_reward + position_reward - ang_vel_penalty + success_bonus
+        reward = orientation_reward + position_reward + success_bonus
 
         # Episode terminates if cube drops below threshold
         dones = (cube_z < self.config.cube_drop_threshold).to(torch.uint8)

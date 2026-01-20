@@ -1,0 +1,1 @@
+allegro cube does not spawn correctly

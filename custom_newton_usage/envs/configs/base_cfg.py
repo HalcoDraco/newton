@@ -28,7 +28,7 @@ class BaseEnvConfig:
     torch_dtype = torch.float32
 
     # Number of parallel environments
-    num_worlds: int = 16
+    num_worlds: int = 64
 
     # Timing
     control_hz: int = 20

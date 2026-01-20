@@ -1,3 +1,4 @@
+check if orientation and position reward are computed per-world in allegro
 benchmark
 allegro buffer for obs
 reward function allegro

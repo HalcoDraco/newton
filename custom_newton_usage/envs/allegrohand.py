@@ -135,15 +135,16 @@ class AllegroHandEnv(NewtonBaseEnv):
             device=self.device,
             dtype=self.torch_dtype,
         )
-        # Identity quaternion (w, x, y, z) format - warp uses scalar-first
-        self._target_quat[:, 0] = 1.0
+        # Identity quaternion (x, y, z, w) format - warp uses scalar-last
+        self._target_quat[:, 3] = 1.0
 
-        # Store initial cube position for position reward
-        self._initial_cube_pos = torch.zeros(
-            (self.num_worlds, 3),
+        # Desired cube position for position reward (same for all worlds in local coords)
+        # The position is in local world coordinates, which are the same for all replicated worlds
+        self._desired_cube_pos = torch.tensor(
+            self.config.desired_cube_position,
             device=self.device,
             dtype=self.torch_dtype,
-        )
+        ).unsqueeze(0).expand(self.num_worlds, -1)
 
     def _apply_actions(self, actions: wp.array) -> None:
         """Apply actions as joint target positions using ArticulationView."""
@@ -219,8 +220,8 @@ class AllegroHandEnv(NewtonBaseEnv):
         quat_dot = torch.clamp(quat_dot, 0.0, 1.0)
         orientation_reward = self.config.orientation_reward_weight * quat_dot
 
-        # Position reward: penalize deviation from initial position
-        pos_diff = torch.norm(cube_pos - self._initial_cube_pos, dim=1)
+        # Position reward: penalize deviation from desired position
+        pos_diff = torch.norm(cube_pos - self._desired_cube_pos, dim=1)
         position_reward = self.config.position_reward_weight * torch.exp(-pos_diff / self.config.position_tolerance)
 
         # Success bonus: reward reaching target orientation
@@ -259,24 +260,117 @@ class AllegroHandEnv(NewtonBaseEnv):
         # Sample random target orientations for each world
         self._sample_target_orientations()
 
-        # Store initial cube position for position reward (after reset)
-        # body_q shape: (num_worlds, num_bodies, 7), select first body (DexCube)
-        cube_body_q = wp.to_torch(self.cube_articulation.get_attribute("body_q", self.state_0))
-        self._initial_cube_pos[:] = cube_body_q[:, 0, :3]
-
     def _sample_target_orientations(self) -> None:
         """Sample random target quaternions for cube reorientation task."""
         # Sample random rotations using uniform quaternion sampling
         # Method: sample 4 Gaussian values and normalize
+        # Format: [x, y, z, w] (warp scalar-last convention)
         random_quat = torch.randn(self.num_worlds, 4, device=self.device, dtype=self.torch_dtype)
         random_quat = random_quat / random_quat.norm(dim=1, keepdim=True)
 
-        # Ensure positive w component (canonical form)
-        sign = torch.sign(random_quat[:, 0:1])
+        # Ensure positive w component (canonical form) - w is at index 3
+        sign = torch.sign(random_quat[:, 3:4])
         sign[sign == 0] = 1.0
         random_quat = random_quat * sign
 
         self._target_quat[:] = random_quat
+
+
+    def render(self) -> None:
+        """Render with orientation visualization arrows."""
+        if type(self.viewer) is newton.viewer.ViewerNull:
+            return
+
+        # Get current cube positions and orientations
+        cube_body_q = wp.to_torch(self.cube_articulation.get_attribute("body_q", self.state_0))
+        cube_pos = cube_body_q[:, 0, :3]  # (num_worlds, 3)
+        cube_quat = cube_body_q[:, 0, 3:]  # (num_worlds, 4) - [x, y, z, w] (warp scalar-last)
+
+        # Get world offsets from viewer for visual positioning
+        if self.viewer.world_offsets is not None:
+            world_offsets = wp.to_torch(self.viewer.world_offsets)[:self.num_worlds]
+        else:
+            world_offsets = torch.zeros((self.num_worlds, 3), device=self.device, dtype=self.torch_dtype)
+
+        # Apply world offsets to cube positions for visualization
+        cube_pos_vis = cube_pos + world_offsets
+
+        # Arrow length for visualization
+        arrow_length = 0.15
+
+        # Compute arrow directions from quaternions
+        # We visualize the "up" direction (z-axis) rotated by each quaternion
+        # This shows which way the cube's local z-axis is pointing
+
+        # For current orientation (blue arrows)
+        current_dir = self._quat_rotate_vector(cube_quat, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+
+        # For target orientation (green arrows)
+        target_dir = self._quat_rotate_vector(self._target_quat, torch.tensor([0.0, 0.0, 1.0], device=self.device))
+
+        # Build arrow arrays: first num_worlds are target (green), next num_worlds are current (blue)
+        arrow_starts_torch = torch.zeros((self.num_worlds * 2, 3), device=self.device, dtype=self.torch_dtype)
+        arrow_ends_torch = torch.zeros((self.num_worlds * 2, 3), device=self.device, dtype=self.torch_dtype)
+        arrow_colors_torch = torch.zeros((self.num_worlds * 2, 3), device=self.device, dtype=self.torch_dtype)
+
+        # Target orientation arrows (green) - start at cube position (with world offset)
+        arrow_starts_torch[:self.num_worlds] = cube_pos_vis
+        arrow_ends_torch[:self.num_worlds] = cube_pos_vis + target_dir * arrow_length
+        arrow_colors_torch[:self.num_worlds] = torch.tensor([0.0, 1.0, 0.0], device=self.device)  # Green
+
+        # Current orientation arrows (blue) - start at cube position, offset slightly
+        offset = torch.tensor([0.02, 0.0, 0.0], device=self.device)
+        arrow_starts_torch[self.num_worlds:] = cube_pos_vis + offset
+        arrow_ends_torch[self.num_worlds:] = cube_pos_vis + offset + current_dir * arrow_length
+        arrow_colors_torch[self.num_worlds:] = torch.tensor([0.0, 0.5, 1.0], device=self.device)  # Blue
+
+        # Convert to warp arrays
+        arrow_starts = wp.from_torch(arrow_starts_torch.contiguous(), dtype=wp.vec3)
+        arrow_ends = wp.from_torch(arrow_ends_torch.contiguous(), dtype=wp.vec3)
+        arrow_colors = wp.from_torch(arrow_colors_torch.contiguous(), dtype=wp.vec3)
+
+        # Call base render
+        self.viewer.begin_frame(self.sim_time)
+        self.viewer.log_state(self.state_0)
+        self.viewer.log_contacts(self.contacts, self.state_0)
+
+        # Log orientation arrows
+        self.viewer.log_lines(
+            "/orientation_arrows",
+            arrow_starts,
+            arrow_ends,
+            arrow_colors,
+            width=0.005,
+        )
+
+        self.viewer.end_frame()
+
+    def _quat_rotate_vector(self, quat: torch.Tensor, vec: torch.Tensor) -> torch.Tensor:
+        """
+        Rotate a vector by quaternions (batched).
+
+        Args:
+            quat: Quaternions of shape (N, 4) in [x, y, z, w] format (warp scalar-last)
+            vec: Vector of shape (3,) to rotate
+
+        Returns:
+            Rotated vectors of shape (N, 3)
+        """
+        # Expand vector to match batch size
+        vec = vec.unsqueeze(0).expand(quat.shape[0], -1)  # (N, 3)
+
+        # Extract quaternion components [x, y, z, w]
+        x, y, z, w = quat[:, 0], quat[:, 1], quat[:, 2], quat[:, 3]
+
+        # Rodrigues' rotation formula via quaternion
+        # v' = v + 2*w*(q_xyz x v) + 2*(q_xyz x (q_xyz x v))
+        q_xyz = quat[:, :3]  # (N, 3)
+
+        # Cross products
+        uv = torch.cross(q_xyz, vec, dim=1)
+        uuv = torch.cross(q_xyz, uv, dim=1)
+
+        return vec + 2.0 * (w.unsqueeze(1) * uv + uuv)
 
 
 class AllegroHandTorchEnv(NewtonTorchEnv, AllegroHandEnv):

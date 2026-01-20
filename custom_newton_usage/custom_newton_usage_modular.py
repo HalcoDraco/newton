@@ -51,15 +51,19 @@ def main():
     env = AllegroHandTorchEnv(viewer, env_config)
 
 
-    # trainer_config = RandomTrainerConfig()
-    # trainer = RandomTrainer(env, trainer_config)
-    
-    trainer_config = GeneticTrainerConfig(
+    trainer_config = RandomTrainerConfig(
         generations=args.generations,
         episode_steps=args.episode_steps,
         render_every=args.render_every,
     )
-    trainer = GeneticTrainer(env, trainer_config)
+    trainer = RandomTrainer(env, trainer_config)
+    
+    # trainer_config = GeneticTrainerConfig(
+    #     generations=args.generations,
+    #     episode_steps=args.episode_steps,
+    #     render_every=args.render_every,
+    # )
+    # trainer = GeneticTrainer(env, trainer_config)
     
 
     trainer.train()

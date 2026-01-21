@@ -16,7 +16,14 @@ physics_hz: int = 120
 		
 		newton:
 			num_envs -> fps; elapsed (s); physics_fps; VRAM (MB)
-			
+			128   -> 13400  fps; 2.86  s; 53600   pfps; 1022  MB
+			256   -> 24500  fps; 3.13  s; 98000   pfps; 1438  MB
+			512   -> 46200  fps; 3.32  s; 184500  pfps; 2170  MB
+			1024  -> 82700  fps; 3.71  s; 331000  pfps; 3740  MB
+			2048  -> 136000 fps; 4.51  s; 544000  pfps; 6782  MB
+			4096  -> 211000 fps; 5.80  s; 847000  pfps; 12900 MB
+			8192  -> 289000 fps; 8.51  s; 1154000 pfps; 25200 MB
+			16384 -> CUDA OOM
 		
 
 

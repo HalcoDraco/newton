@@ -28,8 +28,8 @@ class AllegroHandConfig(BaseEnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)
-    control_hz: int = 50
-    physics_hz: int = 400
+    control_hz: int = 30
+    physics_hz: int = 120
 
     # Physics
     shape_ke: float = 1.0e3  # Contact stiffness
@@ -48,7 +48,7 @@ class AllegroHandConfig(BaseEnvConfig):
     impratio: float = 10.0
     cone: str = "elliptic"
     iterations: int = 100
-    ls_iterations: int = 50
+    ls_iterations: int = 15
 
     # Task: cube reorientation
     cube_drop_threshold: float = 0.1  # Below this z-height, episode ends
@@ -69,5 +69,5 @@ class AllegroHandConfig(BaseEnvConfig):
 
     # Initial cube position [x, y, z] - set to None to use USD default (above hand)
     # For in-hand start, use something like [0.0, -0.15, 1.0]
-    initial_cube_position: tuple[float, float, float] | None = (0.0, -0.15, 1.1)
+    initial_cube_position: tuple[float, float, float] | None = (0.0, -0.15, 1.08)
     desired_cube_position: tuple[float, float, float] = (0.0, -0.15, 1.08)

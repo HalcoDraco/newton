@@ -70,4 +70,4 @@ class AllegroHandConfig(BaseEnvConfig):
     # Initial cube position [x, y, z] - set to None to use USD default (above hand)
     # For in-hand start, use something like [0.0, -0.15, 1.0]
     initial_cube_position: tuple[float, float, float] | None = (0.0, -0.15, 1.1)
-    desired_cube_position: tuple[float, float, float] = (0.0, -0.15, 0.8)
+    desired_cube_position: tuple[float, float, float] = (0.0, -0.15, 1.08)

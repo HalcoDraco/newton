@@ -122,13 +122,6 @@ class AllegroHandEnv(NewtonBaseEnv):
         self._initial_body_q = wp.clone(self.model.body_q)
         self._initial_body_qd = wp.clone(self.model.body_qd)
 
-        # Pre-allocate templates for efficient batched operations
-        self._joint_target_template = torch.zeros(
-            (self.num_worlds, self.hand_articulation.joint_dof_count),
-            device=self.device,
-            dtype=self.torch_dtype,
-        )
-
         # Initialize target orientation for each world
         self._target_quat = torch.zeros(
             (self.num_worlds, 4),
@@ -149,19 +142,7 @@ class AllegroHandEnv(NewtonBaseEnv):
     def _apply_actions(self, actions: wp.array) -> None:
         """Apply actions as joint target positions using ArticulationView."""
         # Actions shape: (num_worlds, action_dim)
-        # actions_torch = wp.to_torch(actions)
-        self._joint_target_template = wp.to_torch(actions)
-
-        # expected_dim = self.hand_articulation.joint_dof_count
-        # if actions_torch.shape[1] != expected_dim:
-        #     if actions_torch.shape[1] < expected_dim:
-        #         actions_torch = torch.nn.functional.pad(actions_torch, (0, expected_dim - actions_torch.shape[1]))
-        #     else:
-        #         actions_torch = actions_torch[:, :expected_dim]
-
-        # Set joint target positions via ArticulationView
-        # self._joint_target_template[:] = actions_torch
-        self.hand_articulation.set_attribute("joint_target_pos", self.control, self._joint_target_template)
+        self.hand_articulation.set_attribute("joint_target_pos", self.control, actions)
 
     def _get_obs(self) -> torch.Tensor:
         """Get observations using ArticulationView for efficient batch access."""
@@ -254,8 +235,13 @@ class AllegroHandEnv(NewtonBaseEnv):
         wp.copy(self.model.joint_qd, self._initial_joint_qd)
 
         # Reset control targets to initial grasp position
-        self._joint_target_template.fill_(self.config.initial_grasp_pos)
-        self.hand_articulation.set_attribute("joint_target_pos", self.control, self._joint_target_template)
+        initial_grasp_pos = torch.full(
+            (self.num_worlds, self.hand_articulation.joint_dof_count),
+            self.config.initial_grasp_pos,
+            device=self.device,
+            dtype=self.torch_dtype,
+        )
+        self.hand_articulation.set_attribute("joint_target_pos", self.control, initial_grasp_pos)
 
         # Sample random target orientations for each world
         self._sample_target_orientations()

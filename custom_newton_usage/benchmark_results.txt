@@ -1,21 +1,22 @@
-holmes:
-	isaaclab:
-		128: 13500 2.84s
-		256: 24500 3.13s
-		512: 45600 3.37s
-		1024: 84600 3.63s
-		2048: 141000 4.36s
-		4096: 219000 5.62s
-		8192: 293400 8.38s
-		16384: 332000 14.80s
-	
-	newton:
-		128: 40500 0.95s
-		256: 75000 1.03s
-		512: 138000 1.11s
-		1024: 252000 1.22s
-		2048: 400000 1.52s
-		4096: 600000 2.02s
-		8192: 800000 3.07s
-		16384: CUDA OOM
+allegrohand at:
+control_hz: int = 30
+physics_hz: int = 120
+
+	holmes:
+		isaaclab:
+			num_envs -> fps; elapsed (s); physics_fps; VRAM (MB)
+			128   -> 13300  fps; 2.88  s; 53500   pfps; 900   MB
+			256   -> 24500  fps; 3.13  s; 97500   pfps; 1000  MB
+			512   -> 45800  fps; 3.35  s; 183000  pfps; 1280  MB
+			1024  -> 85000  fps; 3.61  s; 339000  pfps; 1920  MB
+			2048  -> 141000 fps; 4.36  s; 563000  pfps; 3170  MB
+			4096  -> 219000 fps; 5.60  s; 877000  pfps; 5720  MB
+			8192  -> 291000 fps; 8.43  s; 1165000 pfps; 10650 MB
+			16384 -> 332000 fps; 14.81 s; 1324000 pfps; 20530 MB
+		
+		newton:
+			num_envs -> fps; elapsed (s); physics_fps; VRAM (MB)
+			
+		
+
 

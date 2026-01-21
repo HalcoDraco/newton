@@ -49,3 +49,7 @@ class CartpoleConfig(BaseEnvConfig):
     cart_pos_threshold: float = 2.4
 
     disable_contacts: bool = True
+
+    # Actions
+    action_scale: float = 20.0  # Scale actions
+    action_limit: float = 20.0  # Clamp actions to [-limit, limit]

@@ -1,4 +1,3 @@
-benchmark
 reward function allegro
 adapt for ppo
 adapt for brax

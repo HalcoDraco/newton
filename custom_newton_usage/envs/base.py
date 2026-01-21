@@ -185,8 +185,14 @@ class NewtonBaseEnv(ABC):
         obs = wp.from_torch(obs, dtype=self.wp_dtype)
         return self._from_warp(obs)
 
-    def step(self, actions) -> Tuple[Any, Any, Any]:
+    def step(self, actions: Any) -> Tuple[Any, Any, Any]:
         actions = self._to_warp(actions)
+
+        torch_actions = wp.to_torch(actions)
+        torch_actions = torch_actions * self.config.action_scale
+        torch_actions = torch.clamp(torch_actions, -self.config.action_limit, self.config.action_limit)
+
+        actions = wp.from_torch(torch_actions, dtype=self.wp_dtype)
 
         self._apply_actions(actions)
         self._sim_step()

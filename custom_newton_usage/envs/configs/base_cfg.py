@@ -74,3 +74,7 @@ class BaseEnvConfig:
     tolerance: float = 0.000001
     ls_tolerance: float = 0.01
     include_sites: bool = True
+
+    # Actions
+    action_scale: float = 1.0  # Scale actions
+    action_limit: float = 1.0  # Clamp actions to [-limit, limit]

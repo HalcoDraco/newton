@@ -28,8 +28,8 @@ class AllegroHandConfig(BaseEnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)
-    control_hz: int = 30
-    physics_hz: int = 120
+    control_hz: int = 60
+    physics_hz: int = 400
 
     # Physics
     shape_ke: float = 1.0e3  # Contact stiffness
@@ -38,7 +38,9 @@ class AllegroHandConfig(BaseEnvConfig):
     joint_target_kd: float = 5.0  # Joint drive damping
 
     # Actions
-    action_range: tuple[float, float] = (-21.0, 21.0) # Torque in Nm
+    # action_range: tuple[float, float] = (-21.0, 21.0) # Torque in Nm
+    action_scale: float = 21.0  # Scale actions
+    action_limit: float = 21.0  # Clamp actions to [-limit, limit]
 
     # Solver settings (override base config)
     solver: str = "newton"

@@ -2,8 +2,8 @@ allegrohand at:
 control_hz: int = 30
 physics_hz: int = 120
 
-	holmes:
-		isaaclab:
+	RTX 5090 GPU:
+		isaaclab feature/newton branch random_agent on allegrohand:
 			num_envs -> fps; elapsed (s); physics_fps; VRAM (MB)
 			128   -> 13300  fps; 2.88  s; 53500   pfps; 900   MB
 			256   -> 24500  fps; 3.13  s; 97500   pfps; 1000  MB
@@ -14,7 +14,7 @@ physics_hz: int = 120
 			8192  -> 291000 fps; 8.43  s; 1165000 pfps; 10650 MB
 			16384 -> 332000 fps; 14.81 s; 1324000 pfps; 20530 MB
 		
-		newton:
+		current code random_trainer on allegrohand:
 			num_envs -> fps; elapsed (s); physics_fps; VRAM (MB)
 			128   -> 13400  fps; 2.86  s; 53600   pfps; 1022  MB
 			256   -> 24500  fps; 3.13  s; 98000   pfps; 1438  MB

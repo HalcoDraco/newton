@@ -7,10 +7,10 @@ import newton.examples
 
 torch.set_float32_matmul_precision("medium")
 
-from custom_newton_usage.envs import CartpoleTorchEnv, AllegroHandTorchEnv
-from custom_newton_usage.envs.configs import CartpoleConfig, AllegroHandConfig
-from custom_newton_usage.trainers.configs import RandomTrainerConfig, GeneticTrainerConfig
-from custom_newton_usage.trainers import RandomTrainer, GeneticTrainer
+from newton.newton_learning_examples.envs import CartpoleTorchEnv, AllegroHandTorchEnv
+from newton.newton_learning_examples.envs.configs import CartpoleConfig, AllegroHandConfig
+from newton.newton_learning_examples.trainers.configs import RandomTrainerConfig, GeneticTrainerConfig
+from newton.newton_learning_examples.trainers import RandomTrainer, GeneticTrainer
 
 
 def make_parser():
@@ -37,33 +37,33 @@ def main():
     if args.viewer == "null":
         args.render_every = 0
 
-    # env_config = CartpoleConfig(
-    #     num_worlds=args.num_worlds,
-    #     seed=args.seed,
-    # )
-    # env = CartpoleTorchEnv(viewer, env_config)
-
-
-    env_config = AllegroHandConfig(
+    env_config = CartpoleConfig(
         num_worlds=args.num_worlds,
         seed=args.seed,
     )
-    env = AllegroHandTorchEnv(viewer, env_config)
+    env = CartpoleTorchEnv(viewer, env_config)
 
 
-    trainer_config = RandomTrainerConfig(
-        generations=args.generations,
-        episode_steps=args.episode_steps,
-        render_every=args.render_every,
-    )
-    trainer = RandomTrainer(env, trainer_config)
-    
-    # trainer_config = GeneticTrainerConfig(
+    # env_config = AllegroHandConfig(
+    #     num_worlds=args.num_worlds,
+    #     seed=args.seed,
+    # )
+    # env = AllegroHandTorchEnv(viewer, env_config)
+
+
+    # trainer_config = RandomTrainerConfig(
     #     generations=args.generations,
     #     episode_steps=args.episode_steps,
     #     render_every=args.render_every,
     # )
-    # trainer = GeneticTrainer(env, trainer_config)
+    # trainer = RandomTrainer(env, trainer_config)
+    
+    trainer_config = GeneticTrainerConfig(
+        generations=args.generations,
+        episode_steps=args.episode_steps,
+        render_every=args.render_every,
+    )
+    trainer = GeneticTrainer(env, trainer_config)
     
 
     trainer.train()

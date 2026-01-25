@@ -28,7 +28,7 @@ class AllegroHandConfig(BaseEnvConfig):
     """Configuration for Allegro Hand environment."""
 
     # Timing (override defaults for hand)
-    control_hz: int = 60
+    control_hz: int = 50
     physics_hz: int = 400
 
     # Physics
@@ -58,7 +58,6 @@ class AllegroHandConfig(BaseEnvConfig):
     # Reward weights for cube reorientation
     orientation_reward_weight: float = 2.0  # Main task: match target orientation
     position_reward_weight: float = 0.5  # Keep cube near starting position
-    angular_vel_penalty_weight: float = 0.01  # Penalize fast spinning
     action_penalty_weight: float = 0.01  # Penalize large actions
     success_bonus: float = 5.0  # Bonus for reaching target orientation
 

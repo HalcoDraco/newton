@@ -20,7 +20,7 @@ from newton.solvers import SolverNotifyFlags
 torch.set_float32_matmul_precision("medium")
 
 from .configs import RandomTrainerConfig
-from custom_newton_usage.envs import NewtonBaseEnv
+from newton.newton_learning_examples.envs import NewtonBaseEnv
 from .trainer_base import TrainerBase
 
 

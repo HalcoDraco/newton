@@ -77,7 +77,10 @@ class CartpoleEnv(NewtonBaseEnv):
         joint_q = wp.to_torch(self.articulation.get_attribute("joint_q", self.state_0))
         joint_qd = wp.to_torch(self.articulation.get_attribute("joint_qd", self.state_0))
 
-        obs = torch.cat([joint_q, joint_qd], dim=1)
+        joint_q = torch.squeeze(joint_q, dim=1)
+        joint_qd = torch.squeeze(joint_qd, dim=1)
+
+        obs = torch.cat([joint_q, joint_qd], dim=1) # Shape: (num_worlds, obs_dim)
         return obs
     
     def _compute_rewards(self, obs: torch.Tensor) -> tuple[wp.array, wp.array]:

@@ -142,6 +142,7 @@ class AllegroHandEnv(NewtonBaseEnv):
     def _apply_actions(self, actions: wp.array) -> None:
         """Apply actions as joint target positions using ArticulationView."""
         # Actions shape: (num_worlds, action_dim)
+        actions = wp.to_torch(actions)
         self.hand_articulation.set_attribute("joint_target_pos", self.control, actions)
 
     def _get_obs(self) -> torch.Tensor:
@@ -150,12 +151,18 @@ class AllegroHandEnv(NewtonBaseEnv):
         joint_q = wp.to_torch(self.hand_articulation.get_attribute("joint_q", self.state_0))
         joint_qd = wp.to_torch(self.hand_articulation.get_attribute("joint_qd", self.state_0))
 
+        joint_q = torch.squeeze(joint_q, dim=1)
+        joint_qd = torch.squeeze(joint_qd, dim=1)
+
         # Get cube body state via ArticulationView
         # body_q shape: (num_worlds, num_bodies, 7) - [px, py, pz, qw, qx, qy, qz]
         # The DexCube articulation has 2 bodies: DexCube (index 0) and Dummy (index 1)
         # We only need the DexCube body (first body)
         cube_body_q = wp.to_torch(self.cube_articulation.get_attribute("body_q", self.state_0))
         cube_body_qd = wp.to_torch(self.cube_articulation.get_attribute("body_qd", self.state_0))
+
+        cube_body_q = torch.squeeze(cube_body_q, dim=1)
+        cube_body_qd = torch.squeeze(cube_body_qd, dim=1)
 
         # Select the DexCube body (index 0) - squeeze out the body dimension
         cube_body_q = cube_body_q[:, 0, :]  # Shape: (num_worlds, 7)
@@ -269,6 +276,7 @@ class AllegroHandEnv(NewtonBaseEnv):
 
         # Get current cube positions and orientations
         cube_body_q = wp.to_torch(self.cube_articulation.get_attribute("body_q", self.state_0))
+        cube_body_q = torch.squeeze(cube_body_q, dim=1)
         cube_pos = cube_body_q[:, 0, :3]  # (num_worlds, 3)
         cube_quat = cube_body_q[:, 0, 3:]  # (num_worlds, 4) - [x, y, z, w] (warp scalar-last)
 
